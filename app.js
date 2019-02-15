@@ -1,21 +1,52 @@
 // register service worker
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw-test/sw.js', { scope: '/sw-test/' }).then(function(reg) {
-
-    if(reg.installing) {
-      console.log('Service worker installing');
-    } else if(reg.waiting) {
-      console.log('Service worker installed');
-    } else if(reg.active) {
-      console.log('Service worker active');
-    }
-
-  }).catch(function(error) {
-    // registration failed
-    console.log('Registration failed with ' + error);
-  });
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+    .then(function(registration) {
+      console.log(registration);
+      console.log('ServiceWorker registration successful with scope: ', registration.scope);
+    })
+    .catch(function(err) {
+      console.log('ServiceWorker registration failed: ', err);
+    });
+  }
 }
+
+// function askPermission() {
+//   return new Promise(function(resolve, reject) {
+//     const permissionResult = Notification.requestPermission(function(result) {
+//       resolve(result);
+//     });
+//
+//     if (permissionResult) {
+//       permissionResult.then(resolve, reject);
+//     }
+//   })
+//   .then(function(permissionResult) {
+//     if (permissionResult !== 'granted') {
+//       throw new Error('We weren\'t granted permission.');
+//     }
+//   });
+// }
+//
+// function subscribeUserToPush() {
+//   return navigator.serviceWorker.register('service-worker.js')
+//   .then(function(registration) {
+//     const subscribeOptions = {
+//       userVisibleOnly: true,
+//       applicationServerKey: urlBase64ToUint8Array(
+//         'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U'
+//       )
+//     };
+//
+//     return registration.pushManager.subscribe(subscribeOptions);
+//   })
+//   .then(function(pushSubscription) {
+//     console.log('Received PushSubscription: ', JSON.stringify(pushSubscription));
+//     return pushSubscription;
+//   });
+// }
 
 // function for loading each image via XHR
 
@@ -49,7 +80,15 @@ function imgLoad(imgJSON) {
 var imgSection = document.querySelector('section');
 
 window.onload = function() {
-
+  var logEl = document.querySelector('.logs');
+  function log(msg) {
+    var p = document.createElement('p');
+    p.textContent = msg;
+    logEl.appendChild(p);
+    console.log(msg);
+  }
+  
+  registerServiceWorker();
   // load each set of image, alt text, name and caption
   for(var i = 0; i<=Gallery.images.length-1; i++) {
     imgLoad(Gallery.images[i]).then(function(arrayResponse) {
@@ -71,4 +110,23 @@ window.onload = function() {
       console.log(Error);
     });
   }
+  
+  document.querySelector('.push').addEventListener('click', function(event) {
+    event.preventDefault();
+    new Promise(function(resolve, reject) {
+      Notification.requestPermission(function(result) {
+        if (result !== 'granted') return reject(Error("Denied notification permission"));
+        resolve();
+      })
+    }).then(function() {
+      return navigator.serviceWorker.ready;
+    }).then(function(reg) {
+      return reg.sync.register('syncTest');
+    }).then(function() {
+      log(event.target.value);
+    }).catch(function(err) {
+      log('It broke');
+      log(err.message);
+    });
+  });
 };
